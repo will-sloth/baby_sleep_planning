@@ -486,7 +486,7 @@ function renderTlCol(col,dayStart,dayEnd,H,isActual){
       div.addEventListener('click',()=>openSheet(b.napIdx));
     }
 
-    const label=b.type==='wake'?'awake':b.type==='bed'?'BED':b.type==='long'?'Long':b.type==='short'?'Short':'Cat';
+    const label=b.type==='wake'?'awake':b.type==='bed'?'BED':b.type==='long'?'Long':b.type==='short'?'Short':'Catnap';
     const durMin=b.end-b.start;
     const durStr=fmtDur(durMin);
     if(height>22){
@@ -557,7 +557,7 @@ function renderSheet(i){
       <div class="nap-type-row">
         <button class="type-pill t-long ${n.type==='long'?'active':''}" onclick="sheetSetType(${i},'long')">Long</button>
         <button class="type-pill t-short ${n.type==='short'?'active':''}" onclick="sheetSetType(${i},'short')">Short</button>
-        <button class="type-pill t-catnap ${n.type==='catnap'?'active':''}" onclick="sheetSetType(${i},'catnap')">Cat</button>
+        <button class="type-pill t-catnap ${n.type==='catnap'?'active':''}" onclick="sheetSetType(${i},'catnap')">Catnap</button>
       </div>
       <div class="actual-row">
         <div class="actual-field"><label>Actual start</label><input type="time" id="sAs${i}" value="${m2t(n.plannedStart)}"></div>
@@ -619,7 +619,7 @@ function addNap(){
     if(e>last)last=e;
   }
   const ww=state.naps.length>0?state.naps[state.naps.length-1].wwBefore:105;
-  state.naps.push({type:'catnap',wwBefore:ww,plannedStart:last+ww,plannedEnd:last+ww+s.catnap,actualStart:null,actualEnd:null,status:'planned'});
+  state.naps.push({type:'catnap',duration:s.catnap,wwBefore:ww,plannedStart:last+ww,plannedEnd:last+ww+s.catnap,actualStart:null,actualEnd:null,status:'planned'});
   render();
   openSheet(state.naps.length-1);
 }
@@ -629,7 +629,7 @@ function saveIdeal(){
   const s=getSet();
   const ideal={
     bed:$('sBedtime').value,lastWW:s.lastWW,longNap:s.longNap,shortNap:s.shortNap,catnap:s.catnap,flex:s.flex,
-    pattern:state.naps.map(n=>({type:n.type,wwBefore:n.wwBefore}))
+    pattern:state.naps.map(n=>({type:n.type,duration:n.duration,wwBefore:n.wwBefore}))
   };
   localStorage.setItem(IDEAL_STORE,JSON.stringify(ideal));
   $('btnIdealLoad').disabled=false;
@@ -650,8 +650,8 @@ function loadIdeal(){
   $('sFlex').value=ideal.flex;
   const s=getSet();
   state.naps=ideal.pattern.map(p=>{
-    const dur=p.type==='long'?s.longNap:p.type==='short'?s.shortNap:s.catnap;
-    return{type:p.type,wwBefore:p.wwBefore,plannedStart:0,plannedEnd:0,actualStart:null,actualEnd:null,status:'planned'};
+    const dur=p.duration||(p.type==='long'?s.longNap:p.type==='short'?s.shortNap:s.catnap);
+    return{type:p.type,duration:dur,wwBefore:p.wwBefore,plannedStart:0,plannedEnd:0,actualStart:null,actualEnd:null,status:'planned'};
   });
   recalc();
   render();
