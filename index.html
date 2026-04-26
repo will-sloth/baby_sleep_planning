@@ -124,6 +124,30 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 .btn-ideal-save{background:#e8f5e9;color:var(--green)}
 .btn-ideal-load{background:#fff3e0;color:#e65100}
 .btn-ideal-load:disabled{opacity:.35;cursor:default}
+.action-row3{display:flex;gap:8px;margin-bottom:12px}
+.btn-export{flex:1;padding:12px;border-radius:14px;font-size:.78rem;border:none;font-weight:600;cursor:pointer;min-height:44px}
+.btn-export:active{opacity:.8}
+.btn-export-img{background:#e3f2fd;color:#1565c0}
+.btn-export-txt{background:#f3e5f5;color:#7b1fa2}
+
+/* ===== EXPORT MODAL ===== */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-backdrop.open{opacity:1;pointer-events:auto}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.9);max-width:420px;width:calc(100% - 32px);background:var(--card);border-radius:18px;padding:20px;z-index:201;opacity:0;pointer-events:none;transition:all .25s;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.modal h3{font-size:1rem;color:var(--primary);margin-bottom:12px}
+.modal-close{position:absolute;top:12px;right:16px;background:none;border:none;font-size:1.3rem;color:var(--text2);cursor:pointer}
+.modal textarea{width:100%;height:120px;padding:10px;border:2px solid var(--border);border-radius:10px;font-family:monospace;font-size:.8rem;resize:vertical;background:#f8f9fb}
+.modal .modal-actions{display:flex;gap:8px;margin-top:12px}
+.modal .modal-btn{flex:1;padding:10px;border:none;border-radius:10px;font-size:.82rem;font-weight:600;cursor:pointer;min-height:44px}
+.modal .modal-btn:active{opacity:.7}
+.modal .btn-copy{background:var(--primary);color:#fff}
+.modal .btn-import{background:var(--green);color:#fff}
+.modal .btn-cancel{background:#eceff1;color:var(--text2)}
+.modal .export-img-wrap{text-align:center}
+.modal .export-img-wrap canvas{max-width:100%;border-radius:10px;border:1px solid var(--border)}
+.modal .export-img-wrap img{max-width:100%;border-radius:10px;border:1px solid var(--border)}
+.modal .share-hint{font-size:.75rem;color:var(--text2);margin-top:8px}
 
 /* ===== SETTINGS ===== */
 .settings-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
@@ -197,6 +221,10 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
     <button class="btn-ideal btn-ideal-save" id="btnIdealSave">Save to Ideal</button>
     <button class="btn-ideal btn-ideal-load" id="btnIdealLoad" disabled>Reset from Ideal</button>
   </div>
+  <div class="action-row3">
+    <button class="btn-export btn-export-img" id="btnExportImg">Share as Image</button>
+    <button class="btn-export btn-export-txt" id="btnExportTxt">Share / Import</button>
+  </div>
 
   <div class="card">
     <div class="settings-toggle" id="setToggle">
@@ -237,6 +265,13 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 <div class="sheet" id="sheet">
   <div class="sheet-handle" id="sheetHandle"></div>
   <div id="sheetContent"></div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-backdrop" id="modalBg"></div>
+<div class="modal" id="modal">
+  <button class="modal-close" onclick="closeModal()">&times;</button>
+  <div id="modalContent"></div>
 </div>
 
 <script>
@@ -661,6 +696,150 @@ function checkIdealExists(){
   $('btnIdealLoad').disabled=!localStorage.getItem(IDEAL_STORE);
 }
 
+/* ===== EXPORT / IMPORT ===== */
+function openModal(){$('modalBg').classList.add('open');$('modal').classList.add('open');}
+function closeModal(){$('modalBg').classList.remove('open');$('modal').classList.remove('open');}
+
+function exportAsImage(){
+  const s=getSet();
+  const proj=projBedtime();
+  const date=$('curDate').textContent;
+  const naps=state.naps;
+
+  const W=400,pad=24,rowH=36,headerH=80;
+  const rows=[];
+  let cursor=s.wakeTime;
+  for(let i=0;i<naps.length;i++){
+    const n=naps[i];
+    const ns=n.status==='done'?n.actualStart:n.plannedStart;
+    const ne=n.status==='done'?n.actualEnd:n.plannedEnd;
+    rows.push({label:'Awake',time:`${fmt12(cursor)} – ${fmt12(ns)}`,dur:fmtDur(ns-cursor),color:'#fff3e0',text:'#bf8a30'});
+    const typeL=n.type==='long'?'Long Nap':n.type==='short'?'Short Nap':'Catnap';
+    const napLabel=`Nap ${i+1}: ${typeL}${n.status==='done'?' ✓':''}`;
+    const napColor=n.type==='long'?'#64b5f6':n.type==='short'?'#4dd0e1':'#ba68c8';
+    rows.push({label:napLabel,time:`${fmt12(ns)} – ${fmt12(ne)}`,dur:fmtDur(ne-ns),color:napColor,text:'#fff'});
+    cursor=ne;
+  }
+  rows.push({label:'Last wake window',time:`${fmt12(cursor)} – ${fmt12(proj)}`,dur:fmtDur(proj-cursor),color:'#fff3e0',text:'#bf8a30'});
+  rows.push({label:'Bedtime',time:fmt12(proj),dur:'',color:'#5c6bc0',text:'#fff'});
+
+  const H=headerH+rows.length*rowH+pad*2+30;
+  const canvas=document.createElement('canvas');
+  canvas.width=W*2;canvas.height=H*2;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(2,2);
+
+  // Background
+  ctx.fillStyle='#f4f6fb';ctx.fillRect(0,0,W,H);
+  // Header
+  ctx.fillStyle='#5b7fb5';ctx.font='bold 18px -apple-system,sans-serif';
+  ctx.textAlign='center';ctx.fillText('Baby Sleep Plan',W/2,pad+18);
+  ctx.fillStyle='#607d8b';ctx.font='13px -apple-system,sans-serif';
+  ctx.fillText(date,W/2,pad+36);
+
+  // Projection
+  const diff=proj-s.bedtime;const absDiff=Math.abs(diff);
+  let statusText=`Target ${fmt12(s.bedtime)} → Projected ${fmt12(proj)}`;
+  let statusColor=absDiff<=10?'#43a047':absDiff<=s.flex?'#fb8c00':'#e53935';
+  ctx.fillStyle=statusColor;ctx.font='bold 12px -apple-system,sans-serif';
+  ctx.fillText(statusText,W/2,pad+54);
+
+  // Rows
+  const startY=headerH+pad;
+  ctx.textAlign='left';
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i];
+    const y=startY+i*rowH;
+    ctx.fillStyle=r.color;
+    roundRect(ctx,pad,y,W-pad*2,rowH-4,8);ctx.fill();
+    ctx.fillStyle=r.text;ctx.font='bold 13px -apple-system,sans-serif';
+    ctx.fillText(r.label,pad+10,y+16);
+    ctx.font='12px -apple-system,sans-serif';
+    ctx.fillText(`${r.time}${r.dur?' ('+r.dur+')':''}`,pad+10,y+30);
+  }
+
+  // Footer
+  ctx.fillStyle='#90a4ae';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';
+  ctx.fillText('Baby Sleep Planner',W/2,H-10);
+
+  const dataUrl=canvas.toDataURL('image/png');
+  $('modalContent').innerHTML=`<h3>Share as Image</h3>
+    <div class="export-img-wrap"><img src="${dataUrl}" alt="Schedule"></div>
+    <p class="share-hint">Long-press the image to save or share</p>
+    <div class="modal-actions"><button class="modal-btn btn-cancel" onclick="closeModal()">Close</button></div>`;
+  openModal();
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+function exportAsText(){
+  const s=getSet();
+  const data={
+    v:2,w:+$('inWake').value,
+    bed:$('sBedtime').value,lw:s.lastWW,ln:s.longNap,sn:s.shortNap,cn:s.catnap,fl:s.flex,
+    naps:state.naps.map(n=>({
+      t:n.type[0],d:n.duration||defaultDur(n.type),ww:n.wwBefore,
+      s:n.status==='done'?1:0,
+      as:n.actualStart,ae:n.actualEnd
+    }))
+  };
+  const code=btoa(JSON.stringify(data));
+  $('modalContent').innerHTML=`<h3>Share / Import Schedule</h3>
+    <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Copy this code to share your schedule. Paste a received code to import.</p>
+    <textarea id="shareCode">${code}</textarea>
+    <div class="modal-actions">
+      <button class="modal-btn btn-copy" onclick="copyCode()">Copy Code</button>
+      <button class="modal-btn btn-import" onclick="importCode()">Import</button>
+      <button class="modal-btn btn-cancel" onclick="closeModal()">Close</button>
+    </div>
+    <p class="share-hint" id="shareHint"></p>`;
+  openModal();
+  $('shareCode').select();
+}
+
+function copyCode(){
+  const ta=$('shareCode');
+  ta.select();
+  navigator.clipboard.writeText(ta.value).then(()=>{
+    $('shareHint').textContent='Copied to clipboard!';
+    $('shareHint').style.color='var(--green)';
+  }).catch(()=>{
+    document.execCommand('copy');
+    $('shareHint').textContent='Copied!';
+    $('shareHint').style.color='var(--green)';
+  });
+}
+
+function importCode(){
+  try{
+    const raw=$('shareCode').value.trim();
+    const data=JSON.parse(atob(raw));
+    if(data.v!==2)throw new Error('Unsupported version');
+    pushUndo();
+    $('inWake').value=data.w;
+    $('sBedtime').value=data.bed;
+    $('sLastWW').value=data.lw;$('sLong').value=data.ln;
+    $('sShort').value=data.sn;$('sCat').value=data.cn;$('sFlex').value=data.fl;
+    const typeMap={l:'long',s:'short',c:'catnap'};
+    state.naps=data.naps.map(n=>({
+      type:typeMap[n.t]||'long',duration:n.d,wwBefore:n.ww,
+      plannedStart:0,plannedEnd:0,
+      status:n.s?'done':'planned',
+      actualStart:n.s?n.as:null,actualEnd:n.s?n.ae:null
+    }));
+    recalc();render();
+    $('shareHint').textContent='Imported successfully!';
+    $('shareHint').style.color='var(--green)';
+  }catch(e){
+    $('shareHint').textContent='Invalid code. Please check and try again.';
+    $('shareHint').style.color='var(--red)';
+  }
+}
+
 /* ===== EVENTS ===== */
 $('inWake').addEventListener('input',()=>{updateSliderLabels();recalc();renderProj();renderTimeline();});
 $('inWake').addEventListener('change',()=>{pushUndo();generateDefault();render();});
@@ -669,6 +848,9 @@ $('btnRedist').addEventListener('click',()=>{pushUndo();redistribute();render();
 $('btnUndo').addEventListener('click',undo);
 $('btnIdealSave').addEventListener('click',saveIdeal);
 $('btnIdealLoad').addEventListener('click',loadIdeal);
+$('btnExportImg').addEventListener('click',exportAsImage);
+$('btnExportTxt').addEventListener('click',exportAsText);
+$('modalBg').addEventListener('click',closeModal);
 $('sheetBg').addEventListener('click',closeSheet);
 $('sheetHandle').addEventListener('click',closeSheet);
 $('setToggle').addEventListener('click',()=>{
