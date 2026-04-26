@@ -334,8 +334,7 @@ function pushUndo(){
   undoStack.push(JSON.stringify(state.naps));
   if(undoStack.length>MAX_UNDO)undoStack.shift();
   redoStack.length=0;
-  $('btnUndo').disabled=false;
-  $('btnRedo').disabled=true;
+  updateUndoRedoBtns();
 }
 
 function undo(){
@@ -343,8 +342,7 @@ function undo(){
   redoStack.push(JSON.stringify(state.naps));
   state.naps=JSON.parse(undoStack.pop());
   if(state.sheetIdx>=state.naps.length)closeSheet();
-  $('btnUndo').disabled=undoStack.length===0;
-  $('btnRedo').disabled=false;
+  updateUndoRedoBtns();
   render();
 }
 
@@ -353,9 +351,13 @@ function redo(){
   undoStack.push(JSON.stringify(state.naps));
   state.naps=JSON.parse(redoStack.pop());
   if(state.sheetIdx>=state.naps.length)closeSheet();
-  $('btnUndo').disabled=false;
-  $('btnRedo').disabled=redoStack.length===0;
+  updateUndoRedoBtns();
   render();
+}
+
+function updateUndoRedoBtns(){
+  $('btnUndo').disabled=undoStack.length===0;
+  $('btnRedo').disabled=redoStack.length===0;
 }
 
 function getSet(){
