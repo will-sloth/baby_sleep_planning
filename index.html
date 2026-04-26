@@ -246,7 +246,8 @@ function t2m(s){const[h,m]=s.split(':').map(Number);return h*60+m}
 function m2t(m){const h=Math.floor(m/60)%24,mm=Math.round(m%60);return`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`}
 function fmt12(m){let h=Math.floor(m/60)%24;const mm=Math.round(m%60),ap=h>=12?'PM':'AM';h=h%12||12;return`${h}:${String(mm).padStart(2,'0')} ${ap}`}
 function fmtDur(m){m=Math.round(m);if(m<60)return`${m}m`;const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`}
-function napDur(type){const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
+function napDur(type,nap){if(nap&&nap.duration)return nap.duration;const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
+function defaultDur(type){const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
 
 const STORE='babySleepV2';
 const IDEAL_STORE='babySleepIdeal';
@@ -308,7 +309,7 @@ function generateDefault(){
   for(const t of types){
     const start=cursor+evenWW;
     const dur=t==='long'?s.longNap:t==='short'?s.shortNap:s.catnap;
-    naps.push({type:t,wwBefore:evenWW,plannedStart:start,plannedEnd:start+dur,actualStart:null,actualEnd:null,status:'planned'});
+    naps.push({type:t,duration:dur,wwBefore:evenWW,plannedStart:start,plannedEnd:start+dur,actualStart:null,actualEnd:null,status:'planned'});
     cursor=start+dur;
   }
   state.naps=naps;
@@ -317,7 +318,7 @@ function generateDefault(){
 function redistribute(){
   const s=getSet();
   const lastNapEnd=s.bedtime-s.lastWW;
-  const totalNap=state.naps.reduce((a,n)=>a+napDur(n.type),0);
+  const totalNap=state.naps.reduce((a,n)=>a+napDur(n.type,n),0);
   const totalWake=lastNapEnd-s.wakeTime-totalNap;
   const numWW=state.naps.length;
   if(numWW===0)return;
@@ -332,7 +333,7 @@ function recalc(){
   for(const n of state.naps){
     if(n.status==='done'){cursor=n.actualEnd;}
     else{
-      const dur=napDur(n.type);
+      const dur=napDur(n.type,n);
       n.plannedStart=cursor+n.wwBefore;
       n.plannedEnd=n.plannedStart+dur;
       cursor=n.plannedEnd;
@@ -542,15 +543,21 @@ function renderSheet(i){
   }else{
     html+=`
       <div class="ww-row">
-        <span class="ww-label">Wake window before:</span>
+        <span class="ww-label">Wake window:</span>
         <button class="ww-btn" onclick="sheetAdjWW(${i},-5)">\u2212</button>
         <span class="ww-val">${fmtDur(n.wwBefore)}</span>
         <button class="ww-btn" onclick="sheetAdjWW(${i},5)">+</button>
       </div>
+      <div class="ww-row">
+        <span class="ww-label">Nap duration:</span>
+        <button class="ww-btn" onclick="sheetAdjDur(${i},-5)">\u2212</button>
+        <span class="ww-val">${fmtDur(napDur(n.type,n))}</span>
+        <button class="ww-btn" onclick="sheetAdjDur(${i},5)">+</button>
+      </div>
       <div class="nap-type-row">
-        <button class="type-pill t-long ${n.type==='long'?'active':''}" onclick="sheetSetType(${i},'long')">Long (${fmtDur(s.longNap)})</button>
-        <button class="type-pill t-short ${n.type==='short'?'active':''}" onclick="sheetSetType(${i},'short')">Short (${fmtDur(s.shortNap)})</button>
-        <button class="type-pill t-catnap ${n.type==='catnap'?'active':''}" onclick="sheetSetType(${i},'catnap')">Cat (${fmtDur(s.catnap)})</button>
+        <button class="type-pill t-long ${n.type==='long'?'active':''}" onclick="sheetSetType(${i},'long')">Long</button>
+        <button class="type-pill t-short ${n.type==='short'?'active':''}" onclick="sheetSetType(${i},'short')">Short</button>
+        <button class="type-pill t-catnap ${n.type==='catnap'?'active':''}" onclick="sheetSetType(${i},'catnap')">Cat</button>
       </div>
       <div class="actual-row">
         <div class="actual-field"><label>Actual start</label><input type="time" id="sAs${i}" value="${m2t(n.plannedStart)}"></div>
@@ -582,11 +589,18 @@ function sheetUndo(i){
 function sheetSetType(i,type){
   pushUndo();
   state.naps[i].type=type;
+  state.naps[i].duration=defaultDur(type);
   render();
 }
 function sheetAdjWW(i,delta){
   pushUndo();
   state.naps[i].wwBefore=Math.max(30,state.naps[i].wwBefore+delta);
+  render();
+}
+function sheetAdjDur(i,delta){
+  pushUndo();
+  const n=state.naps[i];
+  n.duration=Math.max(5,(n.duration||defaultDur(n.type))+delta);
   render();
 }
 function sheetRemove(i){
