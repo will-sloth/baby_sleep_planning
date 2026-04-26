@@ -251,18 +251,18 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
   </div>
 
   <div class="action-row">
-    <button class="btn-add" id="btnAdd">+ Add Nap</button>
-    <button class="btn-redist" id="btnRedist">Redistribute</button>
+    <button class="btn-add" id="btnAdd">&#43; Add Nap</button>
+    <button class="btn-redist" id="btnRedist">&#8645; Redistribute</button>
     <button class="btn-undo-global" id="btnUndo" disabled title="Undo"><span class="icon">&#8630;</span>Undo</button>
     <button class="btn-redo-global" id="btnRedo" disabled title="Redo"><span class="icon">&#8631;</span>Redo</button>
   </div>
   <div class="action-row2">
-    <button class="btn-ideal btn-ideal-save" id="btnIdealSave">Save to Ideal</button>
-    <button class="btn-ideal btn-ideal-load" id="btnIdealLoad" disabled>Reset from Ideal</button>
+    <button class="btn-ideal btn-ideal-save" id="btnIdealSave">&#9734; Save to Ideal</button>
+    <button class="btn-ideal btn-ideal-load" id="btnIdealLoad" disabled>&#8635; Reset from Ideal</button>
   </div>
   <div class="action-row3">
-    <button class="btn-export btn-export-img" id="btnExportImg">Share as Image</button>
-    <button class="btn-export btn-export-txt" id="btnExportTxt">Share / Import</button>
+    <button class="btn-export btn-export-img" id="btnExportImg">&#128247; Share as Image</button>
+    <button class="btn-export btn-export-txt" id="btnExportTxt">&#128279; Share / Import</button>
   </div>
 
   <div class="card">
@@ -639,8 +639,8 @@ function renderSheet(i){
     html+=`
       <div class="done-summary">Actual: ${fmt12(n.actualStart)} \u2013 ${fmt12(n.actualEnd)} (${fmtDur(actualDur)})</div>
       <div class="nap-btns">
-        <button class="btn btn-undo" onclick="sheetUndo(${i})">Undo</button>
-        <button class="btn btn-remove" onclick="sheetRemove(${i})">Remove</button>
+        <button class="btn btn-undo" onclick="sheetUndo(${i})">&#8630; Undo</button>
+        <button class="btn btn-remove" onclick="sheetRemove(${i})">&#128465; Remove</button>
       </div>`;
   }else{
     html+=`
@@ -666,11 +666,11 @@ function renderSheet(i){
         <div class="actual-field"><label>Actual end</label><input type="time" id="sAe${i}" value="${m2t(n.plannedEnd)}"></div>
       </div>
       <div class="nap-btns">
-        <button class="btn btn-done-mark" onclick="sheetMarkDone(${i})">Mark Done</button>
-        <button class="btn btn-remove" onclick="sheetRemove(${i})">Remove</button>
+        <button class="btn btn-done-mark" onclick="sheetMarkDone(${i})">&#10003; Mark Done</button>
+        <button class="btn btn-remove" onclick="sheetRemove(${i})">&#128465; Remove</button>
       </div>`;
   }
-  html+=`</div><button class="btn btn-close" onclick="closeSheet()">Close</button>`;
+  html+=`</div><button class="btn btn-close" onclick="closeSheet()">&#10005; Close</button>`;
   $('sheetContent').innerHTML=html;
 }
 
@@ -742,7 +742,7 @@ function saveIdeal(){
   localStorage.setItem(IDEAL_STORE,JSON.stringify(ideal));
   $('btnIdealLoad').disabled=false;
   $('btnIdealSave').textContent='\u2713 Saved!';
-  setTimeout(()=>{$('btnIdealSave').textContent='Save to Ideal';},1200);
+  setTimeout(()=>{$('btnIdealSave').textContent='\u2606 Save to Ideal';},1200);
 }
 
 function loadIdeal(){
@@ -839,7 +839,7 @@ function exportAsImage(){
   $('modalContent').innerHTML=`<h3>Share as Image</h3>
     <div class="export-img-wrap"><img src="${dataUrl}" alt="Schedule"></div>
     <p class="share-hint">Long-press the image to save or share</p>
-    <div class="modal-actions"><button class="modal-btn btn-cancel" onclick="closeModal()">Close</button></div>`;
+    <div class="modal-actions"><button class="modal-btn btn-cancel" onclick="closeModal()">&#10005; Close</button></div>`;
   openModal();
 }
 
@@ -865,9 +865,9 @@ function exportAsText(){
     <p style="font-size:.82rem;color:var(--text2);margin-bottom:8px">Copy this code to share your schedule. Paste a received code to import.</p>
     <textarea id="shareCode">${code}</textarea>
     <div class="modal-actions">
-      <button class="modal-btn btn-copy" onclick="copyCode()">Copy Code</button>
-      <button class="modal-btn btn-import" onclick="importCode()">Import</button>
-      <button class="modal-btn btn-cancel" onclick="closeModal()">Close</button>
+      <button class="modal-btn btn-copy" onclick="copyCode()">&#128203; Copy Code</button>
+      <button class="modal-btn btn-import" onclick="importCode()">&#128229; Import</button>
+      <button class="modal-btn btn-cancel" onclick="closeModal()">&#10005; Close</button>
     </div>
     <p class="share-hint" id="shareHint"></p>`;
   openModal();
