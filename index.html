@@ -32,7 +32,7 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 .wake-card input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#dde3ea;outline:none}
 .wake-card input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--primary);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}
 
-.proj{text-align:center}
+.proj{text-align:center;position:sticky;top:0;z-index:50}
 .proj .target{font-size:.8rem;color:var(--text2)}
 .proj .time{font-size:1.6rem;font-weight:700;margin:2px 0}
 .proj .badge{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 12px;border-radius:20px}
@@ -115,9 +115,10 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 .btn-add:active{opacity:.8}
 .btn-redist{background:var(--primary-light);color:var(--primary);flex:1;padding:14px;border-radius:14px;font-size:.82rem;border:none;font-weight:600;cursor:pointer;min-height:48px}
 .btn-redist:active{opacity:.8}
-.btn-undo-global{background:#eceff1;color:var(--text2);padding:14px;border-radius:14px;font-size:.82rem;border:none;font-weight:600;cursor:pointer;min-height:48px;width:48px;display:flex;align-items:center;justify-content:center}
-.btn-undo-global:active{opacity:.8}
-.btn-undo-global:disabled{opacity:.35;cursor:default}
+.btn-undo-global,.btn-redo-global{background:#eceff1;color:var(--text2);padding:8px 12px;border-radius:14px;font-size:.7rem;border:none;font-weight:600;cursor:pointer;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.btn-undo-global:active,.btn-redo-global:active{opacity:.8}
+.btn-undo-global:disabled,.btn-redo-global:disabled{opacity:.35;cursor:default}
+.btn-undo-global .icon,.btn-redo-global .icon{font-size:1.1rem;line-height:1}
 .action-row2{display:flex;gap:8px;margin-bottom:12px}
 .btn-ideal{flex:1;padding:12px;border-radius:14px;font-size:.78rem;border:none;font-weight:600;cursor:pointer;min-height:44px}
 .btn-ideal:active{opacity:.8}
@@ -149,6 +150,42 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 .modal .export-img-wrap img{max-width:100%;border-radius:10px;border:1px solid var(--border)}
 .modal .share-hint{font-size:.75rem;color:var(--text2);margin-top:8px}
 
+/* ===== DARK MODE ===== */
+.dark-toggle{position:fixed;top:12px;right:12px;z-index:60;width:40px;height:40px;border-radius:50%;border:none;background:var(--card);box-shadow:var(--shadow);cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;color:var(--text)}
+.dark-toggle:active{opacity:.7}
+
+[data-theme="dark"]{
+  --bg:#121520;--card:#1c2033;--primary:#7eb8da;--primary-light:#232940;
+  --text:#e0e6ed;--text2:#8899a6;--border:#2d3548;--shadow:0 2px 12px rgba(0,0,0,.4);
+  --wake:#2a2216;--wake-border:#4a3c28;
+  --green-light:#162616;--yellow-light:#2e2410;--red-light:#2e1414;
+  --nap-long:#3a7bd5;--nap-short:#26a69a;--nap-cat:#9c5bb5;
+}
+[data-theme="dark"] body{background:var(--bg);color:var(--text)}
+[data-theme="dark"] .tl-col{background:#0d1120}
+[data-theme="dark"] .tl-seg.wake{color:#c9a44a}
+[data-theme="dark"] .ww-btn{background:var(--card);color:var(--primary)}
+[data-theme="dark"] .type-pill{background:var(--card);color:var(--text2)}
+[data-theme="dark"] input[type=time]{background:var(--card);color:var(--text);border-color:var(--border)}
+[data-theme="dark"] input[type=range]{background:#2d3548}
+[data-theme="dark"] .sheet{background:var(--card)}
+[data-theme="dark"] .sheet-handle{background:#3d4558}
+[data-theme="dark"] .modal{background:var(--card)}
+[data-theme="dark"] textarea{background:#232940;color:var(--text);border-color:var(--border)}
+[data-theme="dark"] .btn-undo,.dark .btn-cancel{background:#232940}
+[data-theme="dark"] .sheet-backdrop{background:rgba(0,0,0,.55)}
+[data-theme="dark"] .modal-backdrop{background:rgba(0,0,0,.6)}
+[data-theme="dark"] .btn-remove{background:#2e1414}
+
+/* ===== SHEET NAVIGATION ===== */
+.sheet-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0}
+.sheet-nav-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:var(--card);color:var(--primary);font-size:1.1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sheet-nav-btn:active{background:var(--primary-light)}
+.sheet-nav-btn:disabled{opacity:.25;cursor:default}
+.sheet-nav-dots{display:flex;gap:6px;align-items:center}
+.sheet-nav-dot{width:8px;height:8px;border-radius:50%;background:var(--border);transition:all .15s}
+.sheet-nav-dot.active{background:var(--primary);width:10px;height:10px}
+
 /* ===== SETTINGS ===== */
 .settings-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
 .settings-toggle h2{font-size:.95rem;color:var(--primary)}
@@ -174,6 +211,7 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 </style>
 </head>
 <body>
+<button class="dark-toggle" id="darkToggle" title="Toggle dark mode">&#9789;</button>
 <div class="app">
   <header>
     <h1>Baby Sleep Planner</h1>
@@ -215,7 +253,8 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
   <div class="action-row">
     <button class="btn-add" id="btnAdd">+ Add Nap</button>
     <button class="btn-redist" id="btnRedist">Redistribute</button>
-    <button class="btn-undo-global" id="btnUndo" disabled title="Undo">&#8630;</button>
+    <button class="btn-undo-global" id="btnUndo" disabled title="Undo"><span class="icon">&#8630;</span>Undo</button>
+    <button class="btn-redo-global" id="btnRedo" disabled title="Redo"><span class="icon">&#8631;</span>Redo</button>
   </div>
   <div class="action-row2">
     <button class="btn-ideal btn-ideal-save" id="btnIdealSave">Save to Ideal</button>
@@ -288,19 +327,34 @@ const STORE='babySleepV2';
 const IDEAL_STORE='babySleepIdeal';
 const state={naps:[],sheetIdx:-1};
 const undoStack=[];
+const redoStack=[];
 const MAX_UNDO=30;
 
 function pushUndo(){
   undoStack.push(JSON.stringify(state.naps));
   if(undoStack.length>MAX_UNDO)undoStack.shift();
+  redoStack.length=0;
   $('btnUndo').disabled=false;
+  $('btnRedo').disabled=true;
 }
 
 function undo(){
   if(undoStack.length===0)return;
+  redoStack.push(JSON.stringify(state.naps));
   state.naps=JSON.parse(undoStack.pop());
   if(state.sheetIdx>=state.naps.length)closeSheet();
   $('btnUndo').disabled=undoStack.length===0;
+  $('btnRedo').disabled=false;
+  render();
+}
+
+function redo(){
+  if(redoStack.length===0)return;
+  undoStack.push(JSON.stringify(state.naps));
+  state.naps=JSON.parse(redoStack.pop());
+  if(state.sheetIdx>=state.naps.length)closeSheet();
+  $('btnUndo').disabled=false;
+  $('btnRedo').disabled=redoStack.length===0;
   render();
 }
 
@@ -553,6 +607,7 @@ function closeSheet(){
 
 function renderSheet(i){
   if(i<0||i>=state.naps.length){closeSheet();return;}
+  state.sheetIdx=i;
   const n=state.naps[i];
   const s=getSet();
   const ns=n.status==='done'?n.actualStart:n.plannedStart;
@@ -560,8 +615,18 @@ function renderSheet(i){
   const typeLabel=n.type==='long'?'Long':n.type==='short'?'Short':'Catnap';
   const typeClass=`type-${n.type}`;
   const doneClass=n.status==='done'?'is-done':'';
+  const total=state.naps.length;
 
-  let html=`<div class="nap-card ${typeClass} ${doneClass}">
+  let dots='';
+  for(let d=0;d<total;d++)dots+=`<span class="sheet-nav-dot${d===i?' active':''}"></span>`;
+
+  let html=`<div class="sheet-nav">
+    <button class="sheet-nav-btn" onclick="sheetPrev()" ${i===0?'disabled':''}>&#8249;</button>
+    <div class="sheet-nav-dots">${dots}</div>
+    <button class="sheet-nav-btn" onclick="sheetNext()" ${i>=total-1?'disabled':''}>&#8250;</button>
+  </div>`;
+
+  html+=`<div class="nap-card ${typeClass} ${doneClass}">
     <div class="nap-head">
       <span class="nap-title">Nap ${i+1}: ${typeLabel}</span>
       <span class="nap-planned">${fmt12(ns)} \u2013 ${fmt12(ne)}</span>
@@ -643,6 +708,12 @@ function sheetRemove(i){
   state.naps.splice(i,1);
   closeSheet();
   render();
+}
+function sheetPrev(){
+  if(state.sheetIdx>0){state.sheetIdx--;renderSheet(state.sheetIdx);renderTimeline();}
+}
+function sheetNext(){
+  if(state.sheetIdx<state.naps.length-1){state.sheetIdx++;renderSheet(state.sheetIdx);renderTimeline();}
 }
 
 function addNap(){
@@ -846,6 +917,7 @@ $('inWake').addEventListener('change',()=>{pushUndo();generateDefault();render()
 $('btnAdd').addEventListener('click',addNap);
 $('btnRedist').addEventListener('click',()=>{pushUndo();redistribute();render();});
 $('btnUndo').addEventListener('click',undo);
+$('btnRedo').addEventListener('click',redo);
 $('btnIdealSave').addEventListener('click',saveIdeal);
 $('btnIdealLoad').addEventListener('click',loadIdeal);
 $('btnExportImg').addEventListener('click',exportAsImage);
@@ -858,12 +930,22 @@ $('setToggle').addEventListener('click',()=>{
   $('setArrow').classList.toggle('open');
 });
 
-// Swipe down to dismiss sheet
-let touchStartY=0;
-$('sheet').addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY;},{passive:true});
+// Swipe on sheet: down=dismiss, left/right=prev/next nap
+let touchStartX=0,touchStartY=0,swipeHandled=false;
+$('sheet').addEventListener('touchstart',e=>{
+  touchStartX=e.touches[0].clientX;
+  touchStartY=e.touches[0].clientY;
+  swipeHandled=false;
+},{passive:true});
 $('sheet').addEventListener('touchmove',e=>{
+  if(swipeHandled)return;
+  const dx=e.touches[0].clientX-touchStartX;
   const dy=e.touches[0].clientY-touchStartY;
-  if(dy>60)closeSheet();
+  if(Math.abs(dy)>60&&Math.abs(dy)>Math.abs(dx)){closeSheet();swipeHandled=true;}
+  else if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy)){
+    if(dx<0)sheetNext();else sheetPrev();
+    swipeHandled=true;
+  }
 },{passive:true});
 
 document.querySelectorAll('#setBody input[type=range]').forEach(el=>{
@@ -873,6 +955,23 @@ document.querySelectorAll('#setBody input[type=range]').forEach(el=>{
 $('sBedtime').addEventListener('change',render);
 
 $('curDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Dark mode — auto-detect system preference, persist choice
+function applyTheme(dark){
+  document.documentElement.setAttribute('data-theme',dark?'dark':'light');
+  $('darkToggle').textContent=dark?'\u2600':'\u263D';
+}
+const savedTheme=localStorage.getItem('sleepTheme');
+if(savedTheme)applyTheme(savedTheme==='dark');
+else applyTheme(window.matchMedia('(prefers-color-scheme:dark)').matches);
+window.matchMedia('(prefers-color-scheme:dark)').addEventListener('change',e=>{
+  if(!localStorage.getItem('sleepTheme'))applyTheme(e.matches);
+});
+$('darkToggle').addEventListener('click',()=>{
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  applyTheme(!isDark);
+  localStorage.setItem('sleepTheme',isDark?'light':'dark');
+});
 
 // Init — seed ideal schedule from Saturday Apr 25 if none exists
 if(!localStorage.getItem(IDEAL_STORE)){
