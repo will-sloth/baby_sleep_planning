@@ -402,7 +402,7 @@ function restore(){
   try{
     const d=JSON.parse(raw);
     if(d.savedDate!==new Date().toDateString())return false;
-    $('inWake').value=d.wake??420;
+    $('inWake').value=typeof d.wake==='string'?t2m(d.wake):d.wake??420;
     $('sBedtime').value=d.bed||'20:00';
     $('sLastWW').value=d.lastWW??105;
     $('sLong').value=d.long??90;
@@ -471,7 +471,7 @@ function renderTimeline(){
   if(nowMin>=dayStart&&nowMin<=dayEnd){
     const nl=document.createElement('div');
     nl.className='tl-now';
-    nl.style.top=(px(nowMin)+20)+'px';
+    nl.style.top=px(nowMin)+'px';
     $('tlWrap').appendChild(nl);
   }
 
