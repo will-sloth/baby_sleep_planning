@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Baby Sleep Planner</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f6fb;--card:#fff;--primary:#5b7fb5;--primary-light:#e8eef6;
+  --nap-long:#64b5f6;--nap-short:#4dd0e1;--nap-cat:#ba68c8;
+  --wake:#fff3e0;--wake-border:#ffe0b2;--bed:#5c6bc0;
+  --green:#43a047;--green-light:#e8f5e9;--yellow:#fb8c00;--yellow-light:#fff3e0;
+  --red:#e53935;--red-light:#ffebee;--done:#388e3c;
+  --text:#263238;--text2:#607d8b;--border:#cfd8dc;
+  --shadow:0 2px 12px rgba(0,0,0,.07);
+}
+html{font-size:16px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;-webkit-tap-highlight-color:transparent}
+.app{max-width:480px;margin:0 auto;padding:12px 14px 80px}
+
+header{text-align:center;padding:16px 0 8px}
+header h1{font-size:1.35rem;color:var(--primary);letter-spacing:-.5px}
+header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
+
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:var(--shadow)}
+
+.wake-card{display:flex;flex-direction:column;gap:6px}
+.wake-card .wake-top{display:flex;justify-content:space-between;align-items:baseline}
+.wake-card .wake-top label{font-weight:600;font-size:.95rem}
+.wake-card .wake-val{font-weight:700;font-size:1.3rem;color:var(--primary)}
+.wake-card input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#dde3ea;outline:none}
+.wake-card input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--primary);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+
+.proj{text-align:center}
+.proj .target{font-size:.8rem;color:var(--text2)}
+.proj .time{font-size:1.6rem;font-weight:700;margin:2px 0}
+.proj .badge{display:inline-block;font-size:.78rem;font-weight:600;padding:2px 12px;border-radius:20px}
+.proj .badge.ok{background:var(--green-light);color:var(--green)}
+.proj .badge.warn{background:var(--yellow-light);color:var(--yellow)}
+.proj .badge.bad{background:var(--red-light);color:var(--red)}
+.proj .deadline{font-size:.78rem;color:var(--yellow);margin-top:6px}
+
+/* ===== TIMELINE ===== */
+.tl-section h2{font-size:.9rem;color:var(--primary);margin-bottom:10px;display:flex;justify-content:space-between}
+.tl-hint{font-size:.7rem;color:var(--text2);font-weight:400}
+.tl-wrap{display:flex;gap:3px;position:relative}
+.tl-labels{width:36px;position:relative;flex-shrink:0}
+.tl-labels span{position:absolute;right:4px;font-size:.65rem;color:var(--text2);transform:translateY(-50%);line-height:1}
+.tl-col{flex:1;position:relative;border-radius:10px;overflow:hidden;background:#eceff1;min-height:100%}
+.tl-col-head{text-align:center;font-size:.7rem;font-weight:600;color:var(--text2);padding:2px 0;position:absolute;top:-18px;width:100%}
+.tl-seg{position:absolute;left:2px;right:2px;border-radius:6px;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;font-size:.65rem;font-weight:600;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.25);transition:all .15s}
+.tl-seg.wake{background:var(--wake);border:1px solid var(--wake-border);color:#bf8a30;text-shadow:none}
+.tl-seg.long{background:var(--nap-long)}
+.tl-seg.short{background:var(--nap-short)}
+.tl-seg.catnap{background:var(--nap-cat)}
+.tl-seg.bed{background:var(--bed)}
+.tl-seg.done{opacity:.85;outline:2px solid var(--done);outline-offset:-2px}
+.tl-seg.tappable{cursor:pointer}
+.tl-seg.tappable:active{filter:brightness(.9);transform:scale(.98)}
+.tl-seg.selected{outline:3px solid var(--primary);outline-offset:-1px;filter:brightness(1.08);z-index:5}
+.tl-seg .seg-label{font-size:.6rem;opacity:.85;line-height:1}
+.tl-seg .seg-time{font-size:.55rem;opacity:.7;line-height:1;margin-top:1px}
+.tl-seg .seg-dur{font-size:.55rem;opacity:.7;line-height:1;margin-top:1px}
+.tl-now{position:absolute;left:36px;right:0;height:2px;background:var(--red);z-index:10;pointer-events:none}
+.tl-now::before{content:'now';position:absolute;left:-32px;top:-6px;font-size:.6rem;color:var(--red);font-weight:600}
+
+/* ===== BOTTOM SHEET ===== */
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-backdrop.open{opacity:1;pointer-events:auto}
+.sheet{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:var(--card);border-radius:18px 18px 0 0;padding:0 16px 24px;z-index:101;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;box-shadow:0 -4px 24px rgba(0,0,0,.12)}
+.sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:5px;background:#d0d5dd;border-radius:3px;margin:10px auto 14px;cursor:grab}
+
+.sheet .nap-card{border-left:4px solid var(--nap-long);padding:0;box-shadow:none;background:none;border-radius:0;margin:0}
+.sheet .nap-card.type-short{border-left-color:var(--nap-short)}
+.sheet .nap-card.type-catnap{border-left-color:var(--nap-cat)}
+.sheet .nap-card.is-done{border-left-color:var(--done);background:var(--green-light);border-radius:10px;padding:12px}
+
+.nap-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-left:12px}
+.nap-title{font-weight:700;font-size:1rem}
+.nap-planned{font-size:.85rem;color:var(--text2)}
+
+.ww-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-left:12px;flex-wrap:wrap}
+.ww-row .ww-label{font-size:.82rem;color:var(--text2)}
+.ww-btn{width:40px;height:40px;border-radius:50%;border:2px solid var(--border);background:#fff;font-size:1.2rem;font-weight:700;color:var(--primary);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.ww-btn:active{background:var(--primary-light)}
+.ww-val{font-weight:600;font-size:.95rem;min-width:55px;text-align:center}
+
+.nap-type-row{display:flex;gap:8px;margin-bottom:10px;padding-left:12px;flex-wrap:wrap}
+.type-pill{padding:8px 16px;border-radius:20px;font-size:.82rem;font-weight:600;border:2px solid var(--border);background:#fff;cursor:pointer;transition:all .15s}
+.type-pill.active{color:#fff;border-color:transparent}
+.type-pill.active.t-long{background:var(--nap-long)}
+.type-pill.active.t-short{background:var(--nap-short)}
+.type-pill.active.t-catnap{background:var(--nap-cat)}
+
+.actual-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;padding-left:12px}
+.actual-field{display:flex;flex-direction:column;gap:3px}
+.actual-field label{font-size:.75rem;color:var(--text2)}
+.actual-field input[type=time]{padding:8px 10px;border:2px solid var(--border);border-radius:10px;font-size:1rem;width:125px;background:#fff}
+
+.nap-btns{display:flex;gap:8px;margin-top:14px;padding-left:12px;flex-wrap:wrap}
+.btn{padding:10px 18px;border:none;border-radius:12px;font-size:.85rem;font-weight:600;cursor:pointer;transition:opacity .15s;min-height:44px;display:flex;align-items:center;justify-content:center}
+.btn:active{opacity:.7}
+.btn-done-mark{background:var(--green);color:#fff;flex:1}
+.btn-undo{background:#eceff1;color:var(--text2)}
+.btn-remove{background:var(--red-light);color:var(--red)}
+.btn-close{background:var(--primary-light);color:var(--primary);width:100%;margin-top:8px}
+
+.done-summary{font-size:.88rem;color:var(--done);font-weight:600;margin-bottom:6px;padding-left:12px}
+
+/* ===== ACTION BUTTONS ===== */
+.action-row{display:flex;gap:8px;margin-bottom:8px}
+.btn-add{background:var(--primary);color:#fff;flex:1;padding:14px;border-radius:14px;font-size:.95rem;border:none;font-weight:600;cursor:pointer;min-height:48px}
+.btn-add:active{opacity:.8}
+.btn-redist{background:var(--primary-light);color:var(--primary);flex:1;padding:14px;border-radius:14px;font-size:.82rem;border:none;font-weight:600;cursor:pointer;min-height:48px}
+.btn-redist:active{opacity:.8}
+.btn-undo-global{background:#eceff1;color:var(--text2);padding:14px;border-radius:14px;font-size:.82rem;border:none;font-weight:600;cursor:pointer;min-height:48px;width:48px;display:flex;align-items:center;justify-content:center}
+.btn-undo-global:active{opacity:.8}
+.btn-undo-global:disabled{opacity:.35;cursor:default}
+.action-row2{display:flex;gap:8px;margin-bottom:12px}
+.btn-ideal{flex:1;padding:12px;border-radius:14px;font-size:.78rem;border:none;font-weight:600;cursor:pointer;min-height:44px}
+.btn-ideal:active{opacity:.8}
+.btn-ideal-save{background:#e8f5e9;color:var(--green)}
+.btn-ideal-load{background:#fff3e0;color:#e65100}
+.btn-ideal-load:disabled{opacity:.35;cursor:default}
+
+/* ===== SETTINGS ===== */
+.settings-toggle{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.settings-toggle h2{font-size:.95rem;color:var(--primary)}
+.arrow{transition:transform .2s;font-size:1rem;color:var(--primary)}
+.arrow.open{transform:rotate(180deg)}
+.settings-body{display:none;margin-top:12px}
+.settings-body.open{display:block}
+
+.s-row{padding:12px 0;border-bottom:1px solid var(--bg)}
+.s-row:last-child{border:none}
+.s-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.s-label span{font-size:.85rem}
+.s-label .s-val{font-weight:700;color:var(--primary);font-size:.9rem}
+.s-row input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:#dde3ea;outline:none}
+.s-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:var(--primary);cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.s-row input[type=time]{padding:8px 12px;border:2px solid var(--border);border-radius:10px;font-size:1rem;width:100%;background:#fff}
+
+@media(max-width:400px){
+  .app{padding:8px 10px 80px}
+  .actual-row{flex-direction:column;align-items:stretch}
+  .actual-field input[type=time]{width:100%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Baby Sleep Planner</h1>
+    <div class="date" id="curDate"></div>
+  </header>
+
+  <div class="card wake-card">
+    <div class="wake-top">
+      <label>Woke up at</label>
+      <span class="wake-val" id="wakeVal">7:00 AM</span>
+    </div>
+    <input type="range" id="inWake" min="300" max="540" step="5" value="420">
+  </div>
+
+  <div class="card proj" id="projCard">
+    <div class="target">Target bedtime: <span id="dTarget">8:00 PM</span></div>
+    <div class="time" id="dProj">8:00 PM</div>
+    <div class="badge ok" id="dBadge">On target</div>
+    <div class="deadline" id="dDeadline"></div>
+  </div>
+
+  <div class="card tl-section">
+    <h2><span>Timeline</span><span class="tl-hint">tap a nap to edit</span></h2>
+    <div style="position:relative;padding-top:20px">
+      <div class="tl-wrap" id="tlWrap" style="height:500px">
+        <div class="tl-labels" id="tlLabels"></div>
+        <div style="flex:1;position:relative">
+          <div class="tl-col-head">Planned</div>
+          <div class="tl-col" id="tlPlan"></div>
+        </div>
+        <div style="flex:1;position:relative">
+          <div class="tl-col-head">Actual</div>
+          <div class="tl-col" id="tlActual"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn-add" id="btnAdd">+ Add Nap</button>
+    <button class="btn-redist" id="btnRedist">Redistribute</button>
+    <button class="btn-undo-global" id="btnUndo" disabled title="Undo">&#8630;</button>
+  </div>
+  <div class="action-row2">
+    <button class="btn-ideal btn-ideal-save" id="btnIdealSave">Save to Ideal</button>
+    <button class="btn-ideal btn-ideal-load" id="btnIdealLoad" disabled>Reset from Ideal</button>
+  </div>
+
+  <div class="card">
+    <div class="settings-toggle" id="setToggle">
+      <h2>Settings</h2>
+      <span class="arrow" id="setArrow">&#9660;</span>
+    </div>
+    <div class="settings-body" id="setBody">
+      <div class="s-row">
+        <div class="s-label"><span>Target bedtime</span></div>
+        <input type="time" id="sBedtime" value="20:00">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Last wake window</span><span class="s-val" id="vLastWW">1h 45m</span></div>
+        <input type="range" id="sLastWW" min="60" max="210" step="5" value="105">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Long nap duration</span><span class="s-val" id="vLong">1h 30m</span></div>
+        <input type="range" id="sLong" min="30" max="180" step="5" value="90">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Short nap duration</span><span class="s-val" id="vShort">45m</span></div>
+        <input type="range" id="sShort" min="15" max="90" step="5" value="45">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Catnap duration</span><span class="s-val" id="vCat">20m</span></div>
+        <input type="range" id="sCat" min="5" max="45" step="5" value="20">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Bedtime flexibility</span><span class="s-val" id="vFlex">30m</span></div>
+        <input type="range" id="sFlex" min="0" max="60" step="5" value="30">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Sheet -->
+<div class="sheet-backdrop" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle" id="sheetHandle"></div>
+  <div id="sheetContent"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+
+function t2m(s){const[h,m]=s.split(':').map(Number);return h*60+m}
+function m2t(m){const h=Math.floor(m/60)%24,mm=Math.round(m%60);return`${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`}
+function fmt12(m){let h=Math.floor(m/60)%24;const mm=Math.round(m%60),ap=h>=12?'PM':'AM';h=h%12||12;return`${h}:${String(mm).padStart(2,'0')} ${ap}`}
+function fmtDur(m){m=Math.round(m);if(m<60)return`${m}m`;const h=Math.floor(m/60),r=m%60;return r?`${h}h ${r}m`:`${h}h`}
+function napDur(type){const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
+
+const STORE='babySleepV2';
+const IDEAL_STORE='babySleepIdeal';
+const state={naps:[],sheetIdx:-1};
+const undoStack=[];
+const MAX_UNDO=30;
+
+function pushUndo(){
+  undoStack.push(JSON.stringify(state.naps));
+  if(undoStack.length>MAX_UNDO)undoStack.shift();
+  $('btnUndo').disabled=false;
+}
+
+function undo(){
+  if(undoStack.length===0)return;
+  state.naps=JSON.parse(undoStack.pop());
+  if(state.sheetIdx>=state.naps.length)closeSheet();
+  $('btnUndo').disabled=undoStack.length===0;
+  render();
+}
+
+function getSet(){
+  return{
+    bedtime:t2m($('sBedtime').value),
+    lastWW:+$('sLastWW').value,
+    longNap:+$('sLong').value,
+    shortNap:+$('sShort').value,
+    catnap:+$('sCat').value,
+    flex:+$('sFlex').value,
+    wakeTime:+$('inWake').value
+  };
+}
+
+function generateDefault(){
+  const s=getSet();
+  const lastNapEnd=s.bedtime-s.lastWW;
+  const avail=lastNapEnd-s.wakeTime;
+  const types=[];
+  let totalNapTime=0;
+  let remaining=avail;
+  const slotLong=s.longNap,slotCat=s.catnap;
+
+  while(true){
+    const nextNap=types.length<3?slotLong:slotCat;
+    if(remaining-nextNap-90<slotCat+90&&types.length>0){
+      if(remaining>=slotCat+90){types.push('catnap');totalNapTime+=slotCat;}
+      break;
+    }
+    if(remaining<nextNap+90)break;
+    types.push('long');totalNapTime+=nextNap;remaining-=nextNap+90;
+  }
+  if(types.length===0&&avail>=slotCat+60){types.push('catnap');totalNapTime=slotCat;}
+
+  const totalWake=avail-totalNapTime;
+  const numWW=types.length;
+  const evenWW=numWW>0?Math.round(totalWake/numWW):totalWake;
+  const naps=[];
+  let cursor=s.wakeTime;
+  for(const t of types){
+    const start=cursor+evenWW;
+    const dur=t==='long'?s.longNap:t==='short'?s.shortNap:s.catnap;
+    naps.push({type:t,wwBefore:evenWW,plannedStart:start,plannedEnd:start+dur,actualStart:null,actualEnd:null,status:'planned'});
+    cursor=start+dur;
+  }
+  state.naps=naps;
+}
+
+function redistribute(){
+  const s=getSet();
+  const lastNapEnd=s.bedtime-s.lastWW;
+  const totalNap=state.naps.reduce((a,n)=>a+napDur(n.type),0);
+  const totalWake=lastNapEnd-s.wakeTime-totalNap;
+  const numWW=state.naps.length;
+  if(numWW===0)return;
+  const even=Math.round(totalWake/numWW);
+  for(const n of state.naps){if(n.status!=='done')n.wwBefore=Math.max(even,30);}
+  recalc();
+}
+
+function recalc(){
+  const s=getSet();
+  let cursor=s.wakeTime;
+  for(const n of state.naps){
+    if(n.status==='done'){cursor=n.actualEnd;}
+    else{
+      const dur=napDur(n.type);
+      n.plannedStart=cursor+n.wwBefore;
+      n.plannedEnd=n.plannedStart+dur;
+      cursor=n.plannedEnd;
+    }
+  }
+}
+
+function projBedtime(){
+  const s=getSet();
+  let last=s.wakeTime;
+  for(const n of state.naps){
+    const e=n.status==='done'?n.actualEnd:n.plannedEnd;
+    if(e>last)last=e;
+  }
+  return last+s.lastWW;
+}
+
+function save(){
+  const d={
+    wake:+$('inWake').value,bed:$('sBedtime').value,
+    lastWW:+$('sLastWW').value,long:+$('sLong').value,
+    short:+$('sShort').value,cat:+$('sCat').value,flex:+$('sFlex').value,
+    naps:state.naps,savedDate:new Date().toDateString()
+  };
+  localStorage.setItem(STORE,JSON.stringify(d));
+}
+
+function restore(){
+  const raw=localStorage.getItem(STORE);
+  if(!raw)return false;
+  try{
+    const d=JSON.parse(raw);
+    if(d.savedDate!==new Date().toDateString())return false;
+    $('inWake').value=d.wake??420;
+    $('sBedtime').value=d.bed||'20:00';
+    $('sLastWW').value=d.lastWW??105;
+    $('sLong').value=d.long??90;
+    $('sShort').value=d.short??45;
+    $('sCat').value=d.cat??20;
+    $('sFlex').value=d.flex??30;
+    if(d.naps){state.naps=d.naps;return true;}
+  }catch{}
+  return false;
+}
+
+/* ===== RENDERING ===== */
+function render(){
+  updateSliderLabels();
+  recalc();
+  renderProj();
+  renderTimeline();
+  if(state.sheetIdx>=0)renderSheet(state.sheetIdx);
+  save();
+}
+
+function updateSliderLabels(){
+  $('wakeVal').textContent=fmt12(+$('inWake').value);
+  $('vLastWW').textContent=fmtDur(+$('sLastWW').value);
+  $('vLong').textContent=fmtDur(+$('sLong').value);
+  $('vShort').textContent=fmtDur(+$('sShort').value);
+  $('vCat').textContent=fmtDur(+$('sCat').value);
+  $('vFlex').textContent=fmtDur(+$('sFlex').value);
+}
+
+function renderProj(){
+  const s=getSet();
+  const proj=projBedtime();
+  const diff=proj-s.bedtime;
+  const absDiff=Math.abs(diff);
+  $('dTarget').textContent=fmt12(s.bedtime);
+  $('dProj').textContent=fmt12(proj);
+  const b=$('dBadge');
+  if(absDiff<=10){b.textContent='On target';b.className='badge ok';}
+  else if(absDiff<=s.flex){b.textContent=`${diff>0?'+':'\u2212'}${fmtDur(absDiff)}`;b.className='badge warn';}
+  else{b.textContent=`${diff>0?'+':'\u2212'}${fmtDur(absDiff)} \u2014 adjust!`;b.className='badge bad';}
+  $('dDeadline').textContent=`Last nap must end by ${fmt12(s.bedtime-s.lastWW)}`;
+}
+
+function renderTimeline(){
+  const s=getSet();
+  const proj=projBedtime();
+  const dayStart=s.wakeTime;
+  const dayEnd=Math.max(proj,s.bedtime)+15;
+  const totalMin=dayEnd-dayStart;
+  const H=500;
+  const px=m=>Math.round((m-dayStart)/totalMin*H);
+
+  const labelsEl=$('tlLabels');
+  labelsEl.innerHTML='';
+  for(let h=Math.ceil(dayStart/60);h<=Math.floor(dayEnd/60);h++){
+    const sp=document.createElement('span');
+    sp.style.top=px(h*60)+'px';
+    sp.textContent=h>12?(h-12)+'p':h===12?'12p':h+'a';
+    labelsEl.appendChild(sp);
+  }
+
+  const oldNow=document.querySelector('.tl-now');
+  if(oldNow)oldNow.remove();
+  const nowMin=new Date().getHours()*60+new Date().getMinutes();
+  if(nowMin>=dayStart&&nowMin<=dayEnd){
+    const nl=document.createElement('div');
+    nl.className='tl-now';
+    nl.style.top=(px(nowMin)+20)+'px';
+    $('tlWrap').appendChild(nl);
+  }
+
+  renderTlCol($('tlPlan'),dayStart,dayEnd,H,false);
+  renderTlCol($('tlActual'),dayStart,dayEnd,H,true);
+}
+
+function renderTlCol(col,dayStart,dayEnd,H,isActual){
+  col.innerHTML='';
+  const s=getSet();
+  const totalMin=dayEnd-dayStart;
+  const px=m=>Math.max(0,Math.round((m-dayStart)/totalMin*H));
+  const blocks=[];
+  let cursor=s.wakeTime;
+
+  for(let i=0;i<state.naps.length;i++){
+    const n=state.naps[i];
+    let ns,ne;
+    if(isActual){
+      if(n.status!=='done')continue;
+      ns=n.actualStart;ne=n.actualEnd;
+    }else{
+      ns=n.status==='done'?n.actualStart:n.plannedStart;
+      ne=n.status==='done'?n.actualEnd:n.plannedEnd;
+    }
+    if(ns>cursor)blocks.push({type:'wake',start:cursor,end:ns});
+    blocks.push({type:n.type,start:ns,end:ne,done:n.status==='done',idx:i+1,napIdx:i});
+    cursor=ne;
+  }
+
+  const proj=projBedtime();
+  const endTime=isActual?cursor:proj;
+  if(cursor<endTime)blocks.push({type:'wake',start:cursor,end:endTime});
+  if(!isActual)blocks.push({type:'bed',start:proj,end:proj+20});
+
+  for(const b of blocks){
+    const div=document.createElement('div');
+    const top=px(b.start);
+    const height=Math.max(px(b.end)-top,2);
+    const isNap=b.type!=='wake'&&b.type!=='bed';
+    const isSelected=isNap&&b.napIdx===state.sheetIdx;
+    div.className=`tl-seg ${b.type}${b.done?' done':''}${isNap?' tappable':''}${isSelected?' selected':''}`;
+    div.style.top=top+'px';
+    div.style.height=height+'px';
+
+    if(isNap){
+      div.addEventListener('click',()=>openSheet(b.napIdx));
+    }
+
+    const label=b.type==='wake'?'awake':b.type==='bed'?'BED':b.type==='long'?'Long':b.type==='short'?'Short':'Cat';
+    const durMin=b.end-b.start;
+    const durStr=fmtDur(durMin);
+    if(height>22){
+      let inner=`<span class="seg-label">${b.idx?'Nap '+b.idx+': ':''}${label}</span>`;
+      if(height>50){inner+=`<span class="seg-time">${fmt12(b.start)}</span><span class="seg-dur">${durStr}</span>`;}
+      else if(height>36){inner=`<span class="seg-label">${b.idx?'Nap '+b.idx+': ':''}${label} (${durStr})</span><span class="seg-time">${fmt12(b.start)}</span>`;}
+      else{inner=`<span class="seg-label">${label} ${durStr}</span>`;}
+      div.innerHTML=inner;
+    }
+    col.appendChild(div);
+  }
+}
+
+/* ===== BOTTOM SHEET ===== */
+function openSheet(napIdx){
+  state.sheetIdx=napIdx;
+  renderSheet(napIdx);
+  $('sheetBg').classList.add('open');
+  $('sheet').classList.add('open');
+  renderTimeline();
+}
+
+function closeSheet(){
+  $('sheetBg').classList.remove('open');
+  $('sheet').classList.remove('open');
+  state.sheetIdx=-1;
+  renderTimeline();
+}
+
+function renderSheet(i){
+  if(i<0||i>=state.naps.length){closeSheet();return;}
+  const n=state.naps[i];
+  const s=getSet();
+  const ns=n.status==='done'?n.actualStart:n.plannedStart;
+  const ne=n.status==='done'?n.actualEnd:n.plannedEnd;
+  const typeLabel=n.type==='long'?'Long':n.type==='short'?'Short':'Catnap';
+  const typeClass=`type-${n.type}`;
+  const doneClass=n.status==='done'?'is-done':'';
+
+  let html=`<div class="nap-card ${typeClass} ${doneClass}">
+    <div class="nap-head">
+      <span class="nap-title">Nap ${i+1}: ${typeLabel}</span>
+      <span class="nap-planned">${fmt12(ns)} \u2013 ${fmt12(ne)}</span>
+    </div>`;
+
+  if(n.status==='done'){
+    const actualDur=n.actualEnd-n.actualStart;
+    html+=`
+      <div class="done-summary">Actual: ${fmt12(n.actualStart)} \u2013 ${fmt12(n.actualEnd)} (${fmtDur(actualDur)})</div>
+      <div class="nap-btns">
+        <button class="btn btn-undo" onclick="sheetUndo(${i})">Undo</button>
+        <button class="btn btn-remove" onclick="sheetRemove(${i})">Remove</button>
+      </div>`;
+  }else{
+    html+=`
+      <div class="ww-row">
+        <span class="ww-label">Wake window before:</span>
+        <button class="ww-btn" onclick="sheetAdjWW(${i},-5)">\u2212</button>
+        <span class="ww-val">${fmtDur(n.wwBefore)}</span>
+        <button class="ww-btn" onclick="sheetAdjWW(${i},5)">+</button>
+      </div>
+      <div class="nap-type-row">
+        <button class="type-pill t-long ${n.type==='long'?'active':''}" onclick="sheetSetType(${i},'long')">Long (${fmtDur(s.longNap)})</button>
+        <button class="type-pill t-short ${n.type==='short'?'active':''}" onclick="sheetSetType(${i},'short')">Short (${fmtDur(s.shortNap)})</button>
+        <button class="type-pill t-catnap ${n.type==='catnap'?'active':''}" onclick="sheetSetType(${i},'catnap')">Cat (${fmtDur(s.catnap)})</button>
+      </div>
+      <div class="actual-row">
+        <div class="actual-field"><label>Actual start</label><input type="time" id="sAs${i}" value="${m2t(n.plannedStart)}"></div>
+        <div class="actual-field"><label>Actual end</label><input type="time" id="sAe${i}" value="${m2t(n.plannedEnd)}"></div>
+      </div>
+      <div class="nap-btns">
+        <button class="btn btn-done-mark" onclick="sheetMarkDone(${i})">Mark Done</button>
+        <button class="btn btn-remove" onclick="sheetRemove(${i})">Remove</button>
+      </div>`;
+  }
+  html+=`</div><button class="btn btn-close" onclick="closeSheet()">Close</button>`;
+  $('sheetContent').innerHTML=html;
+}
+
+function sheetMarkDone(i){
+  pushUndo();
+  state.naps[i].actualStart=t2m($('sAs'+i).value);
+  state.naps[i].actualEnd=t2m($('sAe'+i).value);
+  state.naps[i].status='done';
+  render();
+}
+function sheetUndo(i){
+  pushUndo();
+  state.naps[i].status='planned';
+  state.naps[i].actualStart=null;
+  state.naps[i].actualEnd=null;
+  render();
+}
+function sheetSetType(i,type){
+  pushUndo();
+  state.naps[i].type=type;
+  render();
+}
+function sheetAdjWW(i,delta){
+  pushUndo();
+  state.naps[i].wwBefore=Math.max(30,state.naps[i].wwBefore+delta);
+  render();
+}
+function sheetRemove(i){
+  pushUndo();
+  state.naps.splice(i,1);
+  closeSheet();
+  render();
+}
+
+function addNap(){
+  pushUndo();
+  const s=getSet();
+  let last=s.wakeTime;
+  for(const n of state.naps){
+    const e=n.status==='done'?n.actualEnd:n.plannedEnd;
+    if(e>last)last=e;
+  }
+  const ww=state.naps.length>0?state.naps[state.naps.length-1].wwBefore:105;
+  state.naps.push({type:'catnap',wwBefore:ww,plannedStart:last+ww,plannedEnd:last+ww+s.catnap,actualStart:null,actualEnd:null,status:'planned'});
+  render();
+  openSheet(state.naps.length-1);
+}
+
+/* ===== IDEAL SCHEDULE ===== */
+function saveIdeal(){
+  const s=getSet();
+  const ideal={
+    bed:$('sBedtime').value,lastWW:s.lastWW,longNap:s.longNap,shortNap:s.shortNap,catnap:s.catnap,flex:s.flex,
+    pattern:state.naps.map(n=>({type:n.type,wwBefore:n.wwBefore}))
+  };
+  localStorage.setItem(IDEAL_STORE,JSON.stringify(ideal));
+  $('btnIdealLoad').disabled=false;
+  $('btnIdealSave').textContent='\u2713 Saved!';
+  setTimeout(()=>{$('btnIdealSave').textContent='Save to Ideal';},1200);
+}
+
+function loadIdeal(){
+  const raw=localStorage.getItem(IDEAL_STORE);
+  if(!raw)return;
+  const ideal=JSON.parse(raw);
+  pushUndo();
+  $('sBedtime').value=ideal.bed;
+  $('sLastWW').value=ideal.lastWW;
+  $('sLong').value=ideal.longNap;
+  $('sShort').value=ideal.shortNap;
+  $('sCat').value=ideal.catnap;
+  $('sFlex').value=ideal.flex;
+  const s=getSet();
+  state.naps=ideal.pattern.map(p=>{
+    const dur=p.type==='long'?s.longNap:p.type==='short'?s.shortNap:s.catnap;
+    return{type:p.type,wwBefore:p.wwBefore,plannedStart:0,plannedEnd:0,actualStart:null,actualEnd:null,status:'planned'};
+  });
+  recalc();
+  render();
+}
+
+function checkIdealExists(){
+  $('btnIdealLoad').disabled=!localStorage.getItem(IDEAL_STORE);
+}
+
+/* ===== EVENTS ===== */
+$('inWake').addEventListener('input',()=>{updateSliderLabels();recalc();renderProj();renderTimeline();});
+$('inWake').addEventListener('change',()=>{pushUndo();generateDefault();render();});
+$('btnAdd').addEventListener('click',addNap);
+$('btnRedist').addEventListener('click',()=>{pushUndo();redistribute();render();});
+$('btnUndo').addEventListener('click',undo);
+$('btnIdealSave').addEventListener('click',saveIdeal);
+$('btnIdealLoad').addEventListener('click',loadIdeal);
+$('sheetBg').addEventListener('click',closeSheet);
+$('sheetHandle').addEventListener('click',closeSheet);
+$('setToggle').addEventListener('click',()=>{
+  $('setBody').classList.toggle('open');
+  $('setArrow').classList.toggle('open');
+});
+
+// Swipe down to dismiss sheet
+let touchStartY=0;
+$('sheet').addEventListener('touchstart',e=>{touchStartY=e.touches[0].clientY;},{passive:true});
+$('sheet').addEventListener('touchmove',e=>{
+  const dy=e.touches[0].clientY-touchStartY;
+  if(dy>60)closeSheet();
+},{passive:true});
+
+document.querySelectorAll('#setBody input[type=range]').forEach(el=>{
+  el.addEventListener('input',()=>{updateSliderLabels();recalc();renderProj();renderTimeline();});
+  el.addEventListener('change',render);
+});
+$('sBedtime').addEventListener('change',render);
+
+$('curDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+// Init — seed ideal schedule from Saturday Apr 25 if none exists
+if(!localStorage.getItem(IDEAL_STORE)){
+  localStorage.setItem(IDEAL_STORE,JSON.stringify({
+    bed:'20:00',lastWW:105,longNap:90,shortNap:45,catnap:20,flex:30,
+    pattern:[
+      {type:'long',wwBefore:85},
+      {type:'long',wwBefore:108},
+      {type:'long',wwBefore:102},
+      {type:'catnap',wwBefore:100}
+    ]
+  }));
+}
+checkIdealExists();
+if(!restore())generateDefault();
+recalc();
+render();
+</script>
+</body>
+</html>
