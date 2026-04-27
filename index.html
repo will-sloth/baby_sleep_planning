@@ -975,15 +975,15 @@ $('darkToggle').addEventListener('click',()=>{
   localStorage.setItem('sleepTheme',isDark?'light':'dark');
 });
 
-// Init — seed ideal schedule from Saturday Apr 25 if none exists
+// Init — seed ideal schedule from Sunday Apr 26 if none exists
 if(!localStorage.getItem(IDEAL_STORE)){
   localStorage.setItem(IDEAL_STORE,JSON.stringify({
-    bed:'20:00',lastWW:105,longNap:90,shortNap:45,catnap:20,flex:30,
+    bed:'20:00',lastWW:105,longNap:90,shortNap:45,catnap:25,flex:30,
     pattern:[
-      {type:'long',wwBefore:85},
-      {type:'long',wwBefore:108},
-      {type:'long',wwBefore:102},
-      {type:'catnap',wwBefore:100}
+      {type:'long',duration:50,wwBefore:106},
+      {type:'long',duration:115,wwBefore:111},
+      {type:'long',duration:90,wwBefore:110},
+      {type:'catnap',duration:25,wwBefore:105}
     ]
   }));
 }
