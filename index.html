@@ -234,6 +234,7 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
     <div class="badge ok" id="dBadge">On target</div>
     <div class="deadline" id="dDeadline"></div>
     <div class="nap-total" id="dNapTotal"></div>
+    <div class="nap-total" id="dWWCheck"></div>
   </div>
 
   <div class="card tl-section">
@@ -355,6 +356,24 @@ function napGuideline(months){
   if(months<=24)return{min:60,max:180};
   if(months<=36)return{min:60,max:120};
   return{min:0,max:60};
+}
+
+function wwGuideline(months){
+  if(months<=1)return{min:35,max:60};
+  if(months<=3)return{min:45,max:90};
+  if(months<=5)return{min:75,max:150};
+  if(months<=8)return{min:120,max:180};
+  if(months<=12)return{min:150,max:210};
+  if(months<=17)return{min:180,max:300};
+  if(months<=24)return{min:240,max:360};
+  if(months<=36)return{min:300,max:420};
+  return{min:360,max:600};
+}
+
+function wwBadgeHtml(ww,g){
+  if(ww>=g.min&&ww<=g.max)return'<span class="badge ok">ok</span>';
+  if(ww<g.min)return`<span class="badge ${g.min-ww<=15?'warn':'bad'}">${fmtDur(g.min-ww)} short</span>`;
+  return`<span class="badge ${ww-g.max<=15?'warn':'bad'}">${fmtDur(ww-g.max)} long</span>`;
 }
 
 const STORE='babySleepV2';
@@ -548,6 +567,24 @@ function renderProj(){
     napHtml+=` <span style="font-size:.7rem;color:var(--text2)">(${fmtDur(g.min)}\u2013${fmtDur(g.max)} for ${age.label})</span>`;
   }
   $('dNapTotal').innerHTML=napHtml;
+
+  let wwHtml='';
+  if(age&&state.naps.length>0){
+    const g=wwGuideline(age.months);
+    const wws=state.naps.map(n=>n.wwBefore);
+    const minWW=Math.min(...wws),maxWW=Math.max(...wws);
+    const allOk=wws.every(w=>w>=g.min&&w<=g.max);
+    if(allOk)wwHtml=`Wake windows: <span class="badge ok">all in range</span>`;
+    else{
+      const short=wws.filter(w=>w<g.min).length,long=wws.filter(w=>w>g.max).length;
+      const parts=[];
+      if(short)parts.push(`${short} short`);
+      if(long)parts.push(`${long} long`);
+      wwHtml=`Wake windows: <span class="badge warn">${parts.join(', ')}</span>`;
+    }
+    wwHtml+=` <span style="font-size:.7rem;color:var(--text2)">(${fmtDur(g.min)}\u2013${fmtDur(g.max)} for ${age.label})</span>`;
+  }
+  $('dWWCheck').innerHTML=wwHtml;
 }
 
 function renderTimeline(){
@@ -690,12 +727,15 @@ function renderSheet(i){
         <button class="btn btn-remove" onclick="sheetRemove(${i})">&#128465; Remove</button>
       </div>`;
   }else{
+    const age=calcAge($('sBirthDate').value);
+    const wwBadge=age?wwBadgeHtml(n.wwBefore,wwGuideline(age.months)):'';
     html+=`
       <div class="ww-row">
         <span class="ww-label">Wake window:</span>
         <button class="ww-btn" onclick="sheetAdjWW(${i},-5)">\u2212</button>
         <span class="ww-val">${fmtDur(n.wwBefore)}</span>
         <button class="ww-btn" onclick="sheetAdjWW(${i},5)">+</button>
+        ${wwBadge}
       </div>
       <div class="ww-row">
         <span class="ww-label">Nap duration:</span>
