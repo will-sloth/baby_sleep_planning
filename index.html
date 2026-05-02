@@ -40,6 +40,8 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
 .proj .badge.warn{background:var(--yellow-light);color:var(--yellow)}
 .proj .badge.bad{background:var(--red-light);color:var(--red)}
 .proj .deadline{font-size:.78rem;color:var(--yellow);margin-top:6px}
+.proj .nap-total{font-size:.78rem;color:var(--text2);margin-top:4px}
+.proj .nap-total .badge{font-size:.72rem;margin-left:4px}
 
 /* ===== TIMELINE ===== */
 .tl-section h2{font-size:.9rem;color:var(--primary);margin-bottom:10px;display:flex;justify-content:space-between}
@@ -231,6 +233,7 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
     <div class="time" id="dProj">8:00 PM</div>
     <div class="badge ok" id="dBadge">On target</div>
     <div class="deadline" id="dDeadline"></div>
+    <div class="nap-total" id="dNapTotal"></div>
   </div>
 
   <div class="card tl-section">
@@ -272,12 +275,20 @@ header .date{color:var(--text2);font-size:.82rem;margin-top:2px}
     </div>
     <div class="settings-body" id="setBody">
       <div class="s-row">
+        <div class="s-label"><span>Baby's birth date</span><span class="s-val" id="vAge"></span></div>
+        <input type="date" id="sBirthDate" value="">
+      </div>
+      <div class="s-row">
         <div class="s-label"><span>Target bedtime</span></div>
         <input type="time" id="sBedtime" value="20:00">
       </div>
       <div class="s-row">
         <div class="s-label"><span>Last wake window</span><span class="s-val" id="vLastWW">1h 45m</span></div>
         <input type="range" id="sLastWW" min="60" max="210" step="5" value="105">
+      </div>
+      <div class="s-row">
+        <div class="s-label"><span>Target wake window</span><span class="s-val" id="vTargetWW">1h 45m</span></div>
+        <input type="range" id="sTargetWW" min="60" max="210" step="5" value="105">
       </div>
       <div class="s-row">
         <div class="s-label"><span>Long nap duration</span><span class="s-val" id="vLong">1h 30m</span></div>
@@ -323,6 +334,29 @@ function fmtDur(m){m=Math.round(m);if(m<60)return`${m}m`;const h=Math.floor(m/60
 function napDur(type,nap){if(nap&&nap.duration)return nap.duration;const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
 function defaultDur(type){const s=getSet();return type==='long'?s.longNap:type==='short'?s.shortNap:s.catnap}
 
+function calcAge(birthStr){
+  if(!birthStr)return null;
+  const b=new Date(birthStr+'T00:00:00'),now=new Date();
+  if(isNaN(b)||b>now)return null;
+  let months=(now.getFullYear()-b.getFullYear())*12+(now.getMonth()-b.getMonth());
+  let days=now.getDate()-b.getDate();
+  if(days<0){months--;const prev=new Date(now.getFullYear(),now.getMonth(),0);days+=prev.getDate();}
+  const totalMonths=months;
+  const label=months>=24?`${Math.floor(months/12)}y ${months%12}m`:months>0?`${months}m ${days}d`:`${days}d`;
+  return{months:totalMonths,days,label};
+}
+
+function napGuideline(months){
+  if(months<=3)return{min:240,max:480};
+  if(months<=5)return{min:180,max:300};
+  if(months<=8)return{min:150,max:210};
+  if(months<=12)return{min:120,max:180};
+  if(months<=17)return{min:90,max:180};
+  if(months<=24)return{min:60,max:180};
+  if(months<=36)return{min:60,max:120};
+  return{min:0,max:60};
+}
+
 const STORE='babySleepV2';
 const IDEAL_STORE='babySleepIdeal';
 const state={naps:[],sheetIdx:-1};
@@ -364,6 +398,7 @@ function getSet(){
   return{
     bedtime:t2m($('sBedtime').value),
     lastWW:+$('sLastWW').value,
+    targetWW:+$('sTargetWW').value,
     longNap:+$('sLong').value,
     shortNap:+$('sShort').value,
     catnap:+$('sCat').value,
@@ -408,13 +443,8 @@ function generateDefault(){
 
 function redistribute(){
   const s=getSet();
-  const lastNapEnd=s.bedtime-s.lastWW;
-  const totalNap=state.naps.reduce((a,n)=>a+napDur(n.type,n),0);
-  const totalWake=lastNapEnd-s.wakeTime-totalNap;
-  const numWW=state.naps.length;
-  if(numWW===0)return;
-  const even=Math.round(totalWake/numWW);
-  for(const n of state.naps){if(n.status!=='done')n.wwBefore=Math.max(even,30);}
+  if(state.naps.length===0)return;
+  for(const n of state.naps){if(n.status!=='done')n.wwBefore=Math.max(s.targetWW,30);}
   recalc();
 }
 
@@ -444,8 +474,8 @@ function projBedtime(){
 
 function save(){
   const d={
-    wake:+$('inWake').value,bed:$('sBedtime').value,
-    lastWW:+$('sLastWW').value,long:+$('sLong').value,
+    wake:+$('inWake').value,bed:$('sBedtime').value,birthDate:$('sBirthDate').value,
+    lastWW:+$('sLastWW').value,targetWW:+$('sTargetWW').value,long:+$('sLong').value,
     short:+$('sShort').value,cat:+$('sCat').value,flex:+$('sFlex').value,
     naps:state.naps,savedDate:new Date().toDateString()
   };
@@ -460,7 +490,9 @@ function restore(){
     if(d.savedDate!==new Date().toDateString())return false;
     $('inWake').value=typeof d.wake==='string'?t2m(d.wake):d.wake??420;
     $('sBedtime').value=d.bed||'20:00';
+    $('sBirthDate').value=d.birthDate||'';
     $('sLastWW').value=d.lastWW??105;
+    $('sTargetWW').value=d.targetWW??105;
     $('sLong').value=d.long??90;
     $('sShort').value=d.short??45;
     $('sCat').value=d.cat??20;
@@ -483,10 +515,13 @@ function render(){
 function updateSliderLabels(){
   $('wakeVal').textContent=fmt12(+$('inWake').value);
   $('vLastWW').textContent=fmtDur(+$('sLastWW').value);
+  $('vTargetWW').textContent=fmtDur(+$('sTargetWW').value);
   $('vLong').textContent=fmtDur(+$('sLong').value);
   $('vShort').textContent=fmtDur(+$('sShort').value);
   $('vCat').textContent=fmtDur(+$('sCat').value);
   $('vFlex').textContent=fmtDur(+$('sFlex').value);
+  const age=calcAge($('sBirthDate').value);
+  $('vAge').textContent=age?age.label:'';
 }
 
 function renderProj(){
@@ -501,6 +536,18 @@ function renderProj(){
   else if(absDiff<=s.flex){b.textContent=`${diff>0?'+':'\u2212'}${fmtDur(absDiff)}`;b.className='badge warn';}
   else{b.textContent=`${diff>0?'+':'\u2212'}${fmtDur(absDiff)} \u2014 adjust!`;b.className='badge bad';}
   $('dDeadline').textContent=`Last nap must end by ${fmt12(s.bedtime-s.lastWW)}`;
+
+  const totalNap=state.naps.reduce((a,n)=>a+napDur(n.type,n),0);
+  const age=calcAge($('sBirthDate').value);
+  let napHtml=`Nap total: ${fmtDur(totalNap)}`;
+  if(age){
+    const g=napGuideline(age.months);
+    if(totalNap>=g.min&&totalNap<=g.max)napHtml+=` <span class="badge ok">in range</span>`;
+    else if(totalNap<g.min)napHtml+=` <span class="badge ${g.min-totalNap<=30?'warn':'bad'}">${fmtDur(g.min-totalNap)} under</span>`;
+    else napHtml+=` <span class="badge ${totalNap-g.max<=30?'warn':'bad'}">${fmtDur(totalNap-g.max)} over</span>`;
+    napHtml+=` <span style="font-size:.7rem;color:var(--text2)">(${fmtDur(g.min)}\u2013${fmtDur(g.max)} for ${age.label})</span>`;
+  }
+  $('dNapTotal').innerHTML=napHtml;
 }
 
 function renderTimeline(){
@@ -736,7 +783,7 @@ function addNap(){
 function saveIdeal(){
   const s=getSet();
   const ideal={
-    bed:$('sBedtime').value,lastWW:s.lastWW,longNap:s.longNap,shortNap:s.shortNap,catnap:s.catnap,flex:s.flex,
+    bed:$('sBedtime').value,birthDate:$('sBirthDate').value,lastWW:s.lastWW,targetWW:s.targetWW,longNap:s.longNap,shortNap:s.shortNap,catnap:s.catnap,flex:s.flex,
     pattern:state.naps.map(n=>({type:n.type,duration:n.duration,wwBefore:n.wwBefore}))
   };
   localStorage.setItem(IDEAL_STORE,JSON.stringify(ideal));
@@ -751,7 +798,9 @@ function loadIdeal(){
   const ideal=JSON.parse(raw);
   pushUndo();
   $('sBedtime').value=ideal.bed;
+  if(ideal.birthDate)$('sBirthDate').value=ideal.birthDate;
   $('sLastWW').value=ideal.lastWW;
+  $('sTargetWW').value=ideal.targetWW??ideal.lastWW;
   $('sLong').value=ideal.longNap;
   $('sShort').value=ideal.shortNap;
   $('sCat').value=ideal.catnap;
@@ -852,8 +901,8 @@ function roundRect(ctx,x,y,w,h,r){
 function exportAsText(){
   const s=getSet();
   const data={
-    v:2,w:+$('inWake').value,
-    bed:$('sBedtime').value,lw:s.lastWW,ln:s.longNap,sn:s.shortNap,cn:s.catnap,fl:s.flex,
+    v:2,w:+$('inWake').value,bd:$('sBirthDate').value,
+    bed:$('sBedtime').value,lw:s.lastWW,tw:s.targetWW,ln:s.longNap,sn:s.shortNap,cn:s.catnap,fl:s.flex,
     naps:state.naps.map(n=>({
       t:n.type[0],d:n.duration||defaultDur(n.type),ww:n.wwBefore,
       s:n.status==='done'?1:0,
@@ -894,8 +943,9 @@ function importCode(){
     if(data.v!==2)throw new Error('Unsupported version');
     pushUndo();
     $('inWake').value=data.w;
+    if(data.bd)$('sBirthDate').value=data.bd;
     $('sBedtime').value=data.bed;
-    $('sLastWW').value=data.lw;$('sLong').value=data.ln;
+    $('sLastWW').value=data.lw;$('sTargetWW').value=data.tw??data.lw;$('sLong').value=data.ln;
     $('sShort').value=data.sn;$('sCat').value=data.cn;$('sFlex').value=data.fl;
     const typeMap={l:'long',s:'short',c:'catnap'};
     state.naps=data.naps.map(n=>({
@@ -955,6 +1005,7 @@ document.querySelectorAll('#setBody input[type=range]').forEach(el=>{
   el.addEventListener('change',render);
 });
 $('sBedtime').addEventListener('change',render);
+$('sBirthDate').addEventListener('change',render);
 
 $('curDate').textContent=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
